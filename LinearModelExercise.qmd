@@ -1,0 +1,167 @@
+---
+title: "Linear Model Refresher Exercise"
+author: "Leah Mount"
+format: html
+editor: visual
+---
+
+# Practice
+
+::: callout-note
+#### Introduction
+
+- We will use a worked example that can be analysed with a linear model containing:
+  1. Continuous explanatory variables
+  2. Categorical explanatory variables
+- We will use a model building strategy that allows us to revise linear regression and ANOVA, eventually combining them into ANCOVA
+- This will allow us to revise all simpler types of linear model analysis (regression, ANOVA, and ANCOVA)
+
+:::
+
+::: callout-tip
+#### The agricultural pollution data
+
+- The data frame used for this example is from case1402, available from the Sleuth3 package
+- The example data comes from an experimental study of the effects of drought and 2 low-level atmospheric pollutants on agricultural yields
+- **Aim of experiment**: to see how the yields of 2 varieties of soya bean (Forrest and William) were affects by 2 pollutants (low-level ozone, sulphur dioxide) and water stress
+- We are looking at how these interact 
+- We will look at the William variety (water stress and ozone treatment)
+
+:::
+  
+## Loading the packages
+
+```{r}
+library(Sleuth3)
+library(ggplot2)
+```
+
+## Preliminaries
+
+::: callout-note
+- The data frame has 30 rows and coloumns
+- The first of the 3 explanatory variables is a 2-level factor for drought stress
+  - Soya beans were grown under 'well-watered' or 'stressed' conditions
+- Soya beans were also exposed to controlled gradients of 2 atmospheric pollutants (example ignores sulphur)
+- Low-level ozone was applied at 5 levels
+  - They form points on a continuum and we expect a simple monotonic effect
+  - Hence, we are treating the ozone as a continuous explanatory variable
+  
+:::
+
+```{r}
+head(case1402, 3)
+```
+
+```{r}
+str(case1402)
+```
+::: callout-tip
+- The summary function summarises each variable
+
+:::
+
+```{r}
+summary(case1402)
+```
+::: callout-tip
+- We can see that the experiment has a balanced 2x3x5 fully factorial design
+  - **Balanced**: it has equal numbers of replicates for each treatment combination
+- It has a completely randomised design
+- The treatment combinations were a random allocation to 1 of 30 open-top growth chambers
+
+:::
+
+::: callout-tip
+- Yields are transformed for log analysis
+- We can either do the transformation:
+  1. In the formula for graphs and linear models
+  2. Creating a new column of log-transformed data using the $
+  
+:::
+
+```{r}
+case1402$log_William <- log(case1402$William)
+head(case1402, 3)
+```
+::: callout-tip
+- It is usually a good idea to graph the data in an informative way
+- facet_wrap is what panels out the data
+
+:::
+
+```{r}
+xlabel <- expression(paste("Ozone (", mu,"L L"^"-1",")"))
+ylabel <- expression(paste("Log Yield (kg ha"^"-1",")"))
+Fig13_0 <- case1402 |>
+ggplot() +
+geom_point(aes(x = O3, y = log(William))) +
+facet_wrap(. ~ Stress) +
+labs(x = xlabel, y = ylabel) +
+xlim(0, 0.1) +
+theme_bw()
+Fig13_0
+```
+
+# Exercise: linear model analysis
+
+## Question 1
+
+::: callout-note
+Fit an ANOVA-type linear model that analyses the yield of the William soy beans (log-transformed) as a function of the effects of water stress.
+:::
+
+```{r}
+anova_model <- lm(log(William) ~ Stress, data = case1402)
+anova(anova_model)
+summary(anova_model)
+```
+
+::: callout-tip
+#### Interpreting the answers
+
+-   The p-value in the ANOVA table is 0.05905, hence insignificant
+-   The coefficients show a positive relationship, but the p-value is insignificant
+-   The effect of water stress is not significant to yield
+:::
+
+## Question 2
+
+::: callout-note
+Fit an regression-type linear model that analyses the yield of the William soy beans (log-transformed) as a function of the effects of ozone.
+:::
+
+```{r}
+dataRegression <- lm(log(William) ~ O3, data = case1402)
+summary(dataRegression)
+```
+
+::: callout-tip
+#### Interpreting the answers
+
+-   The p-value of coefficients shows a statistical significance of O3 on yield
+-   The relationship is negative
+-   The R-squared is 0.567, so the model does not fit the data that well
+-   This overall model is significant; the model explains a significant portion of variability in the outcome
+:::
+
+## Question 3
+
+::: callout-note
+Fit an ANCOVA-type linear model that analyses the yield of the William soy beans (log-transformed) as a function of the effects of water stress, with ad without interaction.
+:::
+
+```{r}
+ancova_together <- lm(log(William) ~ O3*Stress, data = case1402)
+ancova_separate <- lm(log(William) ~ O3 + Stress, data = case1402) 
+summary(ancova_together)
+summary(ancova_separate)
+```
+
+::: callout-tip
+#### Interpreting the answers
+
+-   There is a significant negative effect of O3 on yield
+-   The effect of stress on yield is not significant
+-   When combined, the effect is negative but insignificant
+:::
